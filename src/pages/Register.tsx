@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle } from "lucide-react";
 
 const Register = () => {
   const [displayName, setDisplayName] = useState("");
@@ -49,11 +49,13 @@ const Register = () => {
     
     try {
       await signup(email, password, displayName);
-      toast.success("Account created successfully");
+      toast.success("Admin account created successfully");
       navigate("/");
     } catch (error: any) {
       console.error("Registration error:", error);
-      if (error.code === "auth/email-already-in-use") {
+      if (error.message === "Registration is restricted to administrators only") {
+        toast.error("Registration is restricted to administrators only");
+      } else if (error.code === "auth/email-already-in-use") {
         toast.error("Email is already in use. Please use a different email or log in.");
       } else {
         toast.error("Failed to create account. Please try again.");
@@ -68,14 +70,21 @@ const Register = () => {
       <Card className="shadow-lg">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center text-tnTrendy-purple-dark">
-            Create an Account
+            Admin Registration
           </CardTitle>
           <CardDescription className="text-center">
-            Register to start shopping with TnTrendy
+            Create an administrator account for TnTrendy
           </CardDescription>
         </CardHeader>
         
         <CardContent>
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-6 flex items-start">
+            <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-amber-700">
+              This registration is only for administrators. Regular users do not need to create an account to shop.
+            </p>
+          </div>
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="displayName">Full Name</Label>
@@ -94,7 +103,7 @@ const Register = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="your.email@example.com"
+                placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="form-input"
@@ -142,14 +151,14 @@ const Register = () => {
             </div>
             
             <Button type="submit" className="w-full btn-primary" disabled={loading}>
-              {loading ? "Creating Account..." : "Register"}
+              {loading ? "Creating Admin Account..." : "Register Admin"}
             </Button>
           </form>
         </CardContent>
         
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
-            Already have an account?{" "}
+            Already have an admin account?{" "}
             <Link
               to="/login"
               className="font-medium text-tnTrendy-purple-vivid hover:text-tnTrendy-purple-tertiary transition-colors"

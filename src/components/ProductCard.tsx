@@ -1,12 +1,18 @@
 
 import { Link } from "react-router-dom";
 import { Product } from "@/models/Product";
+import placeholderImage from "../assets/placeholder-1.jpg";
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
+  // Function to handle image loading errors
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = placeholderImage;
+  };
+
   return (
     <Link to={`/products/${product.id}`} className="block">
       <div className="bg-white rounded-lg overflow-hidden shadow-md card-hover">
@@ -15,6 +21,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
             src={product.image}
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+            onError={handleImageError}
+            loading="lazy" // Add lazy loading for better performance
           />
           <div className="absolute bottom-0 left-0 bg-tnTrendy-purple-vivid text-white px-3 py-1 rounded-tr-md">
             ${product.price.toFixed(2)}

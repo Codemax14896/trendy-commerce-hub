@@ -23,13 +23,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, Pencil, Trash2, Plus } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, RefreshCcw } from "lucide-react";
+import placeholderImage from "../../assets/placeholder-1.jpg";
 
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
 
@@ -40,50 +42,17 @@ const AdminProducts = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
+      setError(null);
       const productsData = await getProducts();
       setProducts(productsData);
     } catch (error) {
       console.error("Error loading products:", error);
+      setError("Failed to load products. Please try again.");
       toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
   };
-  
-  // If no products are loaded yet, use placeholder data
-  useEffect(() => {
-    if (products.length === 0 && !loading) {
-      setProducts([
-        {
-          id: "1",
-          name: "Wireless Earbuds Pro",
-          description: "Premium sound quality with active noise cancellation and 24-hour battery life.",
-          price: 129.99,
-          image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        },
-        {
-          id: "2",
-          name: "Smart Home Hub",
-          description: "Control your entire home with voice commands and smart automation features.",
-          price: 199.99,
-          image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        },
-        {
-          id: "3",
-          name: "Premium Fitness Tracker",
-          description: "Track your health metrics, workouts, and sleep patterns with this waterproof device.",
-          price: 89.99,
-          image: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        }
-      ]);
-    }
-  }, [loading, products.length]);
 
   const confirmDelete = (productId: string) => {
     setProductToDelete(productId);
@@ -105,23 +74,47 @@ const AdminProducts = () => {
       setProductToDelete(null);
     }
   };
+  
+  // Handle image loading errors
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = placeholderImage;
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-tnTrendy-purple-dark">Manage Products</h1>
-        <Button
-          onClick={() => navigate("/admin/products/add")}
-          className="btn-primary flex items-center"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={loadProducts}
+            variant="outline"
+            className="flex items-center"
+            disabled={loading}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/products/add")}
+            className="btn-primary flex items-center"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
+        </div>
       </div>
       
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tnTrendy-purple-vivid"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Products</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={loadProducts} className="bg-red-600 hover:bg-red-700 text-white">
+            Try Again
+          </Button>
         </div>
       ) : products.length > 0 ? (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -144,6 +137,7 @@ const AdminProducts = () => {
                       src={product.image}
                       alt={product.name}
                       className="w-10 h-10 object-cover rounded"
+                      onError={handleImageError}
                     />
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>

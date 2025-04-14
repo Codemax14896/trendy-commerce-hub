@@ -9,6 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Search, FilterX } from "lucide-react";
+import { toast } from "sonner";
+
+// Import local placeholder images
+import placeholderImage1 from "../assets/placeholder-1.jpg";
+import placeholderImage2 from "../assets/placeholder-2.jpg";
+import placeholderImage3 from "../assets/placeholder-3.jpg";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,137 +22,170 @@ const Products = () => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [maxPrice, setMaxPrice] = useState(1000);
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
   const [categories, setCategories] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        
-        let loadedProducts: Product[];
-        if (selectedCategory) {
-          loadedProducts = await getProductsByCategory(selectedCategory);
-        } else {
-          loadedProducts = await getProducts();
-        }
-        
-        setProducts(loadedProducts);
-        setFilteredProducts(loadedProducts);
+    const initialCategory = searchParams.get("category") || "";
+    setSelectedCategory(initialCategory);
+    
+    loadProducts(initialCategory);
+  }, [searchParams]);
 
-        // Extract unique categories
-        const uniqueCategories = Array.from(
-          new Set(loadedProducts.map((product) => product.category).filter(Boolean))
-        ) as string[];
-        setCategories(uniqueCategories);
-
-        // Find max price for slider
-        if (loadedProducts.length > 0) {
-          const maxPrice = Math.max(
-            ...loadedProducts.map((product) => product.price)
-          );
-          setPriceRange([0, Math.ceil(maxPrice)]);
-        }
-      } catch (error) {
-        console.error("Error loading products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProducts();
-  }, [selectedCategory]);
-
-  // If no products are available yet, use placeholder data
-  useEffect(() => {
-    if (products.length === 0 && !loading) {
-      const placeholderProducts = [
-        {
-          id: "1",
-          name: "Wireless Earbuds Pro",
-          description: "Premium sound quality with active noise cancellation and 24-hour battery life.",
-          price: 129.99,
-          image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        },
-        {
-          id: "2",
-          name: "Smart Home Hub",
-          description: "Control your entire home with voice commands and smart automation features.",
-          price: 199.99,
-          image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        },
-        {
-          id: "3",
-          name: "Premium Fitness Tracker",
-          description: "Track your health metrics, workouts, and sleep patterns with this waterproof device.",
-          price: 89.99,
-          image: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        },
-        {
-          id: "4",
-          name: "Stylish Desk Lamp",
-          description: "Modern design with adjustable brightness and color temperature.",
-          price: 49.99,
-          image: "https://images.unsplash.com/photo-1582562124811-c09040d0a901?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Home"
-        },
-        {
-          id: "5",
-          name: "Portable Bluetooth Speaker",
-          description: "Waterproof speaker with 20-hour battery life and immersive sound.",
-          price: 79.99,
-          image: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        },
-        {
-          id: "6",
-          name: "Smart Watch",
-          description: "Fitness tracking, notifications, and apps on your wrist.",
-          price: 249.99,
-          image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          category: "Electronics"
-        }
-      ];
+  const loadProducts = async (category: string) => {
+    try {
+      setLoading(true);
+      setError(null);
       
+      let loadedProducts: Product[];
+      
+      if (category) {
+        loadedProducts = await getProductsByCategory(category);
+      } else {
+        loadedProducts = await getProducts();
+      }
+      
+      // If no products loaded from Firestore, use placeholder data
+      if (loadedProducts.length === 0) {
+        console.log("No products loaded from Firestore, using placeholder data");
+        loadedProducts = getPlaceholderProducts();
+      }
+      
+      setProducts(loadedProducts);
+      
+      // Extract unique categories from products
+      const uniqueCategories = Array.from(
+        new Set(loadedProducts.map((product) => product.category).filter(Boolean))
+      ) as string[];
+      
+      setCategories(uniqueCategories);
+      
+      // Find max price for slider
+      if (loadedProducts.length > 0) {
+        const maxProductPrice = Math.max(...loadedProducts.map((product) => product.price));
+        const roundedMaxPrice = Math.ceil(maxProductPrice / 100) * 100; // Round up to nearest 100
+        setMaxPrice(roundedMaxPrice);
+        setPriceRange([0, roundedMaxPrice]);
+      }
+      
+      // Apply initial filter
+      applyFilters(loadedProducts, searchTerm, category, [0, maxPrice]);
+      
+    } catch (error) {
+      console.error("Error loading products:", error);
+      setError("Failed to load products. Please try again later.");
+      toast.error("Failed to load products");
+      // Use placeholder data as fallback
+      const placeholderProducts = getPlaceholderProducts();
       setProducts(placeholderProducts);
-      setFilteredProducts(placeholderProducts);
-      setCategories(["Electronics", "Home"]);
-      setPriceRange([0, 250]);
+      
+      // Extract categories from placeholder data
+      const placeholderCategories = Array.from(
+        new Set(placeholderProducts.map((product) => product.category).filter(Boolean))
+      ) as string[];
+      
+      setCategories(placeholderCategories);
+      applyFilters(placeholderProducts, searchTerm, category, [0, 250]);
+      
+    } finally {
+      setLoading(false);
     }
-  }, [loading, products.length]);
+  };
 
-  useEffect(() => {
-    // Apply filters
-    const result = products.filter((product) => {
-      // Search term filter
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
+  const getPlaceholderProducts = (): Product[] => {
+    return [
+      {
+        id: "placeholder1",
+        name: "Wireless Earbuds Pro",
+        description: "Premium sound quality with active noise cancellation and 24-hour battery life.",
+        price: 129.99,
+        image: placeholderImage1,
+        subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+        category: "Electronics"
+      },
+      {
+        id: "placeholder2",
+        name: "Smart Home Hub",
+        description: "Control your entire home with voice commands and smart automation features.",
+        price: 199.99,
+        image: placeholderImage2,
+        subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+        category: "Electronics"
+      },
+      {
+        id: "placeholder3",
+        name: "Premium Fitness Tracker",
+        description: "Track your health metrics, workouts, and sleep patterns with this waterproof device.",
+        price: 89.99,
+        image: placeholderImage3,
+        subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+        category: "Electronics"
+      },
+      {
+        id: "placeholder4",
+        name: "Stylish Desk Lamp",
+        description: "Modern design with adjustable brightness and color temperature.",
+        price: 49.99,
+        image: placeholderImage1,
+        subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+        category: "Home"
+      },
+      {
+        id: "placeholder5",
+        name: "Portable Bluetooth Speaker",
+        description: "Waterproof speaker with 20-hour battery life and immersive sound.",
+        price: 79.99,
+        image: placeholderImage2,
+        subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+        category: "Electronics"
+      },
+      {
+        id: "placeholder6",
+        name: "Smart Watch",
+        description: "Fitness tracking, notifications, and apps on your wrist.",
+        price: 249.99,
+        image: placeholderImage3,
+        subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+        category: "Electronics"
+      }
+    ];
+  };
+
+  const applyFilters = (
+    productsToFilter: Product[],
+    search: string,
+    category: string,
+    price: [number, number]
+  ) => {
+    const result = productsToFilter.filter((product) => {
+      // Search term filter (case insensitive)
+      const matchesSearch = !search || 
+        product.name.toLowerCase().includes(search.toLowerCase()) ||
+        product.description.toLowerCase().includes(search.toLowerCase());
       
       // Category filter
-      const matchesCategory = !selectedCategory || product.category === selectedCategory;
+      const matchesCategory = !category || product.category === category;
       
       // Price range filter
-      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+      const matchesPrice = product.price >= price[0] && product.price <= price[1];
       
       return matchesSearch && matchesCategory && matchesPrice;
     });
     
     setFilteredProducts(result);
-  }, [searchTerm, selectedCategory, priceRange, products]);
+  };
+
+  // Re-apply filters when filter settings change
+  useEffect(() => {
+    applyFilters(products, searchTerm, selectedCategory, priceRange);
+  }, [searchTerm, selectedCategory, priceRange[0], priceRange[1]]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // The filtering is already handled by the useEffect above
+    applyFilters(products, searchTerm, selectedCategory, priceRange);
   };
 
   const handleCategoryChange = (category: string) => {
@@ -157,12 +196,14 @@ const Products = () => {
     } else {
       setSearchParams({});
     }
+    
+    // Category change is handled by the useEffect watching searchParams
   };
 
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedCategory("");
-    setPriceRange([0, Math.max(...products.map(p => p.price))]);
+    setPriceRange([0, maxPrice]);
     setSearchParams({});
   };
 
@@ -229,10 +270,10 @@ const Products = () => {
             <div className="mb-6">
               <h3 className="font-medium text-tnTrendy-purple-dark mb-3">Price Range</h3>
               <Slider
-                defaultValue={[0, 250]}
+                defaultValue={[0, maxPrice]}
                 value={priceRange}
-                onValueChange={setPriceRange}
-                max={Math.max(...products.map(p => Math.ceil(p.price)), 250)}
+                onValueChange={(value) => setPriceRange(value as [number, number])}
+                max={maxPrice}
                 step={1}
                 className="mb-2"
               />
@@ -260,6 +301,14 @@ const Products = () => {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="bg-tnTrendy-gray-soft animate-pulse rounded-lg h-80"></div>
               ))}
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+              <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Products</h3>
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={() => loadProducts(selectedCategory)} className="bg-red-600 hover:bg-red-700 text-white">
+                Try Again
+              </Button>
             </div>
           ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

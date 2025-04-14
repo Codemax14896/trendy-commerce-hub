@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -37,11 +37,15 @@ const Login = () => {
     
     try {
       await login(email, password);
-      toast.success("Logged in successfully");
-      navigate("/");
-    } catch (error) {
+      toast.success("Logged in as administrator");
+      navigate("/admin/products");
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast.error("Failed to log in. Please check your credentials.");
+      if (error.message === "Only administrators are allowed to log in") {
+        toast.error("Only administrators are allowed to log in");
+      } else {
+        toast.error("Failed to log in. Please check your credentials.");
+      }
     } finally {
       setLoading(false);
     }
@@ -52,21 +56,28 @@ const Login = () => {
       <Card className="shadow-lg">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center text-tnTrendy-purple-dark">
-            Welcome Back
+            Admin Login
           </CardTitle>
           <CardDescription className="text-center">
-            Log in to your TnTrendy account
+            Log in to your TnTrendy admin account
           </CardDescription>
         </CardHeader>
         
         <CardContent>
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-6 flex items-start">
+            <ShieldCheck className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-blue-700">
+              This login is restricted to administrators only. Regular users can browse and order products without an account.
+            </p>
+          </div>
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Admin Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="your.email@example.com"
+                placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="form-input"
@@ -109,19 +120,19 @@ const Login = () => {
             </div>
             
             <Button type="submit" className="w-full btn-primary" disabled={loading}>
-              {loading ? "Logging in..." : "Log In"}
+              {loading ? "Logging in..." : "Admin Log In"}
             </Button>
           </form>
         </CardContent>
         
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
-            Don't have an account?{" "}
+            Need an admin account?{" "}
             <Link
               to="/register"
               className="font-medium text-tnTrendy-purple-vivid hover:text-tnTrendy-purple-tertiary transition-colors"
             >
-              Register
+              Register Admin
             </Link>
           </div>
         </CardFooter>
