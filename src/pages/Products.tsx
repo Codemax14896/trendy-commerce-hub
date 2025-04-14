@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Search, FilterX } from "lucide-react";
-import { toast } from "sonner";
+import { Search, FilterX, RefreshCcw } from "lucide-react";
 
 // Import local placeholder images
 import placeholderImage1 from "../assets/placeholder-1.jpg";
@@ -76,8 +75,8 @@ const Products = () => {
       
     } catch (error) {
       console.error("Error loading products:", error);
-      setError("Failed to load products. Please try again later.");
-      toast.error("Failed to load products");
+      setError("Failed to load products. Using placeholder data.");
+      
       // Use placeholder data as fallback
       const placeholderProducts = getPlaceholderProducts();
       setProducts(placeholderProducts);
@@ -89,7 +88,6 @@ const Products = () => {
       
       setCategories(placeholderCategories);
       applyFilters(placeholderProducts, searchTerm, category, [0, 250]);
-      
     } finally {
       setLoading(false);
     }
@@ -160,34 +158,37 @@ const Products = () => {
     category: string,
     price: [number, number]
   ) => {
-    const result = productsToFilter.filter((product) => {
-      // Search term filter (case insensitive)
-      const matchesSearch = !search || 
-        product.name.toLowerCase().includes(search.toLowerCase()) ||
-        product.description.toLowerCase().includes(search.toLowerCase());
-      
-      // Category filter
-      const matchesCategory = !category || product.category === category;
-      
-      // Price range filter
-      const matchesPrice = product.price >= price[0] && product.price <= price[1];
-      
-      return matchesSearch && matchesCategory && matchesPrice;
-    });
+    let result = [...productsToFilter];
+    
+    // Search term filter (case insensitive)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      result = result.filter(product => 
+        product.name.toLowerCase().includes(searchLower) ||
+        (product.description && product.description.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Category filter
+    if (category) {
+      result = result.filter(product => product.category === category);
+    }
+    
+    // Price range filter
+    result = result.filter(product => 
+      product.price >= price[0] && product.price <= price[1]
+    );
     
     setFilteredProducts(result);
   };
 
-  // Re-apply filters when filter settings change
-  useEffect(() => {
-    applyFilters(products, searchTerm, selectedCategory, priceRange);
-  }, [searchTerm, selectedCategory, priceRange[0], priceRange[1]]);
-
+  // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     applyFilters(products, searchTerm, selectedCategory, priceRange);
   };
 
+  // Handle category selection
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     
@@ -196,20 +197,45 @@ const Products = () => {
     } else {
       setSearchParams({});
     }
-    
-    // Category change is handled by the useEffect watching searchParams
   };
 
+  // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedCategory("");
     setPriceRange([0, maxPrice]);
     setSearchParams({});
+    
+    // Reset filters and show all products
+    applyFilters(products, "", "", [0, maxPrice]);
   };
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    loadProducts(selectedCategory);
+  };
+
+  // Apply filters when filter settings change
+  useEffect(() => {
+    if (products.length > 0) {
+      applyFilters(products, searchTerm, selectedCategory, priceRange);
+    }
+  }, [searchTerm, selectedCategory, priceRange[0], priceRange[1]]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-bold text-tnTrendy-purple-dark mb-8">Products</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-tnTrendy-purple-dark">Products</h1>
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          className="flex items-center"
+          disabled={loading}
+        >
+          <RefreshCcw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Filters sidebar */}
@@ -217,7 +243,7 @@ const Products = () => {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold text-tnTrendy-purple-dark mb-6">Filters</h2>
             
-            <form onSubmit={handleSearch}>
+            <form onSubmit={handleSearch} className="mb-6">
               <div className="mb-6">
                 <Label htmlFor="search" className="block mb-2">Search</Label>
                 <div className="relative">
@@ -232,6 +258,7 @@ const Products = () => {
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-tnTrendy-gray" />
                 </div>
               </div>
+              <Button type="submit" className="w-full">Search</Button>
             </form>
             
             <div className="mb-6">
@@ -239,6 +266,7 @@ const Products = () => {
               <div className="space-y-2">
                 <div>
                   <button
+                    type="button"
                     onClick={() => handleCategoryChange("")}
                     className={`text-sm block w-full text-left px-2 py-1.5 rounded ${
                       selectedCategory === ""
@@ -253,6 +281,7 @@ const Products = () => {
                 {categories.map((category) => (
                   <div key={category}>
                     <button
+                      type="button"
                       onClick={() => handleCategoryChange(category)}
                       className={`text-sm block w-full text-left px-2 py-1.5 rounded ${
                         selectedCategory === category
@@ -303,12 +332,14 @@ const Products = () => {
               ))}
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Products</h3>
-              <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={() => loadProducts(selectedCategory)} className="bg-red-600 hover:bg-red-700 text-white">
-                Try Again
-              </Button>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-amber-800 mb-2">Notice</h3>
+              <p className="text-amber-700 mb-4">{error}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
             </div>
           ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

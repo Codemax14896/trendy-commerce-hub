@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,16 +9,19 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
+// Admin credentials for display purposes
+const ADMIN_EMAIL = "admin@tntrendy.com";
+const ADMIN_PASSWORD = "admin123";
+
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(ADMIN_EMAIL);
+  const [password, setPassword] = useState(ADMIN_PASSWORD);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -77,33 +80,27 @@ const Login = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="form-input"
                 required
+                readOnly
               />
             </div>
             
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="password">Password</Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-tnTrendy-purple-vivid hover:text-tnTrendy-purple-tertiary transition-colors"
-                >
-                  Forgot password?
-                </Link>
               </div>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="form-input pr-10"
                   required
+                  readOnly
                 />
                 <button
                   type="button"
@@ -124,18 +121,6 @@ const Login = () => {
             </Button>
           </form>
         </CardContent>
-        
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-center text-sm">
-            Need an admin account?{" "}
-            <Link
-              to="/register"
-              className="font-medium text-tnTrendy-purple-vivid hover:text-tnTrendy-purple-tertiary transition-colors"
-            >
-              Register Admin
-            </Link>
-          </div>
-        </CardFooter>
       </Card>
     </div>
   );
