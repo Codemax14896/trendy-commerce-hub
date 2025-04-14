@@ -2,9 +2,41 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Product, Category } from "@/models/Product";
-import { getFeaturedProducts } from "@/services/productService";
+import { getFeaturedProducts, seedProducts } from "@/services/productService";
 import ProductCard from "@/components/ProductCard";
 import { ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+
+// Sample products for seeding the database if empty
+const sampleProducts = [
+  {
+    name: "Wireless Earbuds Pro",
+    description: "Premium sound quality with active noise cancellation and 24-hour battery life.",
+    price: 129.99,
+    image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: true,
+    category: "Electronics"
+  },
+  {
+    name: "Smart Home Hub",
+    description: "Control your entire home with voice commands and smart automation features.",
+    price: 199.99,
+    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: true,
+    category: "Smart Home"
+  },
+  {
+    name: "Premium Fitness Tracker",
+    description: "Track your health metrics, workouts, and sleep patterns with this waterproof device.",
+    price: 89.99,
+    image: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: true,
+    category: "Fitness"
+  }
+];
 
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -28,59 +60,30 @@ const Home = () => {
       id: "3",
       name: "Home",
       description: "Modern furniture and decor",
-      image: "https://images.unsplash.com/photo-1721322800607-8c38375eef04?auto=format&fit=crop&w=600&q=80"
+      image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"
     }
   ];
 
   useEffect(() => {
-    const loadFeaturedProducts = async () => {
+    const initializeProducts = async () => {
       try {
+        // First try to seed products if the database is empty
+        await seedProducts(sampleProducts);
+        
+        // Then load featured products
+        setLoading(true);
         const products = await getFeaturedProducts();
         setFeaturedProducts(products);
       } catch (error) {
-        console.error("Error loading featured products:", error);
+        console.error("Error initializing products:", error);
+        toast.error("Error loading featured products");
       } finally {
         setLoading(false);
       }
     };
 
-    loadFeaturedProducts();
+    initializeProducts();
   }, []);
-
-  // If no featured products are available yet, use placeholder data
-  useEffect(() => {
-    if (featuredProducts.length === 0 && !loading) {
-      setFeaturedProducts([
-        {
-          id: "1",
-          name: "Wireless Earbuds Pro",
-          description: "Premium sound quality with active noise cancellation and 24-hour battery life.",
-          price: 129.99,
-          image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          featured: true
-        },
-        {
-          id: "2",
-          name: "Smart Home Hub",
-          description: "Control your entire home with voice commands and smart automation features.",
-          price: 199.99,
-          image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          featured: true
-        },
-        {
-          id: "3",
-          name: "Premium Fitness Tracker",
-          description: "Track your health metrics, workouts, and sleep patterns with this waterproof device.",
-          price: 89.99,
-          image: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=600&q=80",
-          subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
-          featured: true
-        }
-      ]);
-    }
-  }, [loading, featuredProducts.length]);
 
   return (
     <div className="min-h-screen">
@@ -131,11 +134,15 @@ const Home = () => {
                 <div key={i} className="bg-tnTrendy-gray-soft animate-pulse rounded-lg h-80"></div>
               ))}
             </div>
-          ) : (
+          ) : featuredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-tnTrendy-gray">No featured products available at the moment.</p>
             </div>
           )}
         </div>

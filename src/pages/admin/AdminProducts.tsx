@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Product } from "@/models/Product";
-import { getProducts, deleteProduct } from "@/services/productService";
+import { getProducts, deleteProduct, seedProducts } from "@/services/productService";
 import {
   Table,
   TableBody,
@@ -23,8 +23,57 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, Pencil, Trash2, Plus, RefreshCcw } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, RefreshCcw, Database } from "lucide-react";
 import placeholderImage from "../../assets/placeholder-1.jpg";
+
+// Sample products for seeding the database
+const sampleProducts = [
+  {
+    name: "Wireless Earbuds Pro",
+    description: "Premium sound quality with active noise cancellation and 24-hour battery life.",
+    price: 129.99,
+    image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: true,
+    category: "Electronics"
+  },
+  {
+    name: "Smart Home Hub",
+    description: "Control your entire home with voice commands and smart automation features.",
+    price: 199.99,
+    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: true,
+    category: "Smart Home"
+  },
+  {
+    name: "Premium Fitness Tracker",
+    description: "Track your health metrics, workouts, and sleep patterns with this waterproof device.",
+    price: 89.99,
+    image: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: true,
+    category: "Fitness"
+  },
+  {
+    name: "Smartphone Gimbal",
+    description: "Stabilize your smartphone videos with this professional-grade gimbal.",
+    price: 79.99,
+    image: "https://images.unsplash.com/photo-1587860154305-eedea40ac482?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: false,
+    category: "Electronics"
+  },
+  {
+    name: "Mechanical Keyboard",
+    description: "Responsive tactile feedback for gaming and typing enthusiasts.",
+    price: 149.99,
+    image: "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=600&q=80",
+    subscriptionOptions: ["1 Year", "2 Years", "3 Years"],
+    featured: false,
+    category: "Electronics"
+  }
+];
 
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -32,6 +81,7 @@ const AdminProducts = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [seedingProducts, setSeedingProducts] = useState(false);
   
   const navigate = useNavigate();
 
@@ -80,6 +130,22 @@ const AdminProducts = () => {
     e.currentTarget.src = placeholderImage;
   };
 
+  // Add a function to seed sample products
+  const handleSeedProducts = async () => {
+    try {
+      setSeedingProducts(true);
+      await seedProducts(sampleProducts);
+      toast.success("Sample products added successfully");
+      // Reload products to see the newly added ones
+      await loadProducts();
+    } catch (error) {
+      console.error("Error seeding products:", error);
+      toast.error("Failed to add sample products");
+    } finally {
+      setSeedingProducts(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex justify-between items-center mb-8">
@@ -94,6 +160,19 @@ const AdminProducts = () => {
             <RefreshCcw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
+          
+          {products.length === 0 && (
+            <Button
+              onClick={handleSeedProducts}
+              variant="outline"
+              className="flex items-center"
+              disabled={seedingProducts}
+            >
+              <Database className="mr-2 h-4 w-4" />
+              {seedingProducts ? "Adding..." : "Add Sample Products"}
+            </Button>
+          )}
+          
           <Button
             onClick={() => navigate("/admin/products/add")}
             className="btn-primary flex items-center"
@@ -179,15 +258,25 @@ const AdminProducts = () => {
         <div className="bg-white p-8 rounded-lg shadow-md text-center">
           <h3 className="text-xl font-semibold text-tnTrendy-purple-dark mb-4">No products found</h3>
           <p className="text-tnTrendy-gray mb-6">
-            Start by adding your first product to the store.
+            Start by adding your first product to the store or use the "Add Sample Products" button to quickly populate your store.
           </p>
-          <Button
-            onClick={() => navigate("/admin/products/add")}
-            className="btn-primary inline-flex items-center"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Your First Product
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              onClick={handleSeedProducts}
+              className="btn-secondary inline-flex items-center"
+              disabled={seedingProducts}
+            >
+              <Database className="mr-2 h-4 w-4" />
+              {seedingProducts ? "Adding..." : "Add Sample Products"}
+            </Button>
+            <Button
+              onClick={() => navigate("/admin/products/add")}
+              className="btn-primary inline-flex items-center"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Your First Product
+            </Button>
+          </div>
         </div>
       )}
       

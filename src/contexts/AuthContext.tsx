@@ -12,10 +12,10 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { toast } from "sonner";
 
 // Admin credentials
 const ADMIN_EMAIL = "admin@tntrendy.com";
-const ADMIN_PASSWORD = "admin123"; // In a real app, this would not be hardcoded
 
 interface AuthContextType {
   currentUser: User | null;
@@ -45,64 +45,109 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Simplified login function - only allows the admin email
+  // Login function - only allows admin login
   async function login(email: string, password: string) {
-    // Only allow admin login
-    if (email !== ADMIN_EMAIL) {
-      throw new Error("Only administrators are allowed to log in");
-    }
-    
     try {
+      // Only allow admin login
+      if (email !== ADMIN_EMAIL) {
+        toast.error("Only administrators are allowed to log in");
+        throw new Error("Only administrators are allowed to log in");
+      }
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       setIsAdmin(true);
+      toast.success("Successfully logged in");
       return;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
+      toast.error(error.message || "Failed to log in");
       throw error;
     }
   }
 
   function logout() {
-    return signOut(auth);
+    return signOut(auth).then(() => {
+      toast.success("Logged out successfully");
+    });
   }
 
-  // Add signup function
+  // Signup function - only allow admin registration
   async function signup(email: string, password: string, displayName: string) {
-    // Only allow admin registration
-    if (email !== ADMIN_EMAIL) {
-      throw new Error("Registration is restricted to administrators only");
-    }
-    
     try {
+      // Only allow admin registration
+      if (email !== ADMIN_EMAIL) {
+        toast.error("Registration is restricted to administrators only");
+        throw new Error("Registration is restricted to administrators only");
+      }
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       // Update profile with display name
       await updateProfile(userCredential.user, { displayName });
+      toast.success("Account created successfully");
       return;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
+      toast.error(error.message || "Failed to create account");
       throw error;
     }
   }
 
   // Add password reset function
   async function resetPassword(email: string) {
-    return sendPasswordResetEmail(auth, email);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast.success("Password reset email sent");
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      toast.error(error.message || "Failed to send password reset email");
+      throw error;
+    }
   }
 
-  // Add profile update functions
+  // Profile update functions
   async function updateUserProfile(displayName: string) {
-    if (!currentUser) throw new Error("No user is logged in");
-    return updateProfile(currentUser, { displayName });
+    if (!currentUser) {
+      toast.error("No user is logged in");
+      throw new Error("No user is logged in");
+    }
+    try {
+      await updateProfile(currentUser, { displayName });
+      toast.success("Profile updated successfully");
+    } catch (error: any) {
+      console.error("Profile update error:", error);
+      toast.error(error.message || "Failed to update profile");
+      throw error;
+    }
   }
 
   async function updateUserEmail(newEmail: string) {
-    if (!currentUser) throw new Error("No user is logged in");
-    return updateEmail(currentUser, newEmail);
+    if (!currentUser) {
+      toast.error("No user is logged in");
+      throw new Error("No user is logged in");
+    }
+    try {
+      await updateEmail(currentUser, newEmail);
+      toast.success("Email updated successfully");
+    } catch (error: any) {
+      console.error("Email update error:", error);
+      toast.error(error.message || "Failed to update email");
+      throw error;
+    }
   }
 
   async function updateUserPassword(newPassword: string) {
-    if (!currentUser) throw new Error("No user is logged in");
-    return updatePassword(currentUser, newPassword);
+    if (!currentUser) {
+      toast.error("No user is logged in");
+      throw new Error("No user is logged in");
+    }
+    try {
+      await updatePassword(currentUser, newPassword);
+      toast.success("Password updated successfully");
+    } catch (error: any) {
+      console.error("Password update error:", error);
+      toast.error(error.message || "Failed to update password");
+      throw error;
+    }
   }
 
   useEffect(() => {

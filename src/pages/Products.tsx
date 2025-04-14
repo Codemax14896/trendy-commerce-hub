@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Product } from "@/models/Product";
 import { getProducts, getProductsByCategory } from "@/services/productService";
@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Search, FilterX, RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
 
-// Import local placeholder images
+// Import local placeholder images for fallback
 import placeholderImage1 from "../assets/placeholder-1.jpg";
 import placeholderImage2 from "../assets/placeholder-2.jpg";
 import placeholderImage3 from "../assets/placeholder-3.jpg";
@@ -20,6 +21,7 @@ const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [maxPrice, setMaxPrice] = useState(1000);
@@ -47,12 +49,7 @@ const Products = () => {
         loadedProducts = await getProducts();
       }
       
-      // If no products loaded from Firestore, use placeholder data
-      if (loadedProducts.length === 0) {
-        console.log("No products loaded from Firestore, using placeholder data");
-        loadedProducts = getPlaceholderProducts();
-      }
-      
+      console.log("Products loaded:", loadedProducts.length);
       setProducts(loadedProducts);
       
       // Extract unique categories from products
@@ -75,7 +72,8 @@ const Products = () => {
       
     } catch (error) {
       console.error("Error loading products:", error);
-      setError("Failed to load products. Using placeholder data.");
+      setError("Failed to load products. Please try refreshing the page.");
+      toast.error("Failed to load products");
       
       // Use placeholder data as fallback
       const placeholderProducts = getPlaceholderProducts();
@@ -90,6 +88,7 @@ const Products = () => {
       applyFilters(placeholderProducts, searchTerm, category, [0, 250]);
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -217,10 +216,10 @@ const Products = () => {
 
   // Apply filters when filter settings change
   useEffect(() => {
-    if (products.length > 0) {
+    if (products.length > 0 && !initialLoading) {
       applyFilters(products, searchTerm, selectedCategory, priceRange);
     }
-  }, [searchTerm, selectedCategory, priceRange[0], priceRange[1]]);
+  }, [searchTerm, selectedCategory, priceRange[0], priceRange[1], initialLoading]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -335,11 +334,16 @@ const Products = () => {
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
               <h3 className="text-lg font-medium text-amber-800 mb-2">Notice</h3>
               <p className="text-amber-700 mb-4">{error}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              <Button onClick={handleRefresh} className="bg-amber-600 hover:bg-amber-700 text-white">
+                Try Again
+              </Button>
+              {filteredProducts.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
             </div>
           ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
