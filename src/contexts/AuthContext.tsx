@@ -1,6 +1,16 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { 
+  User, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  updateEmail,
+  updatePassword,
+  sendPasswordResetEmail
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 // Admin credentials
@@ -13,6 +23,11 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  signup: (email: string, password: string, displayName: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateUserProfile: (displayName: string) => Promise<void>;
+  updateUserEmail: (email: string) => Promise<void>;
+  updateUserPassword: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,6 +66,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return signOut(auth);
   }
 
+  // Add signup function
+  async function signup(email: string, password: string, displayName: string) {
+    // Only allow admin registration
+    if (email !== ADMIN_EMAIL) {
+      throw new Error("Registration is restricted to administrators only");
+    }
+    
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Update profile with display name
+      await updateProfile(userCredential.user, { displayName });
+      return;
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
+  }
+
+  // Add password reset function
+  async function resetPassword(email: string) {
+    return sendPasswordResetEmail(auth, email);
+  }
+
+  // Add profile update functions
+  async function updateUserProfile(displayName: string) {
+    if (!currentUser) throw new Error("No user is logged in");
+    return updateProfile(currentUser, { displayName });
+  }
+
+  async function updateUserEmail(newEmail: string) {
+    if (!currentUser) throw new Error("No user is logged in");
+    return updateEmail(currentUser, newEmail);
+  }
+
+  async function updateUserPassword(newPassword: string) {
+    if (!currentUser) throw new Error("No user is logged in");
+    return updatePassword(currentUser, newPassword);
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -73,7 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin,
     loading,
     login,
-    logout
+    logout,
+    signup,
+    resetPassword,
+    updateUserProfile,
+    updateUserEmail,
+    updateUserPassword
   };
 
   return (
