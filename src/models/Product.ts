@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -8,8 +7,8 @@ export interface Product {
   subscriptionOptions: string[];
   featured?: boolean;
   category?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: any; // Allow for both Timestamp and string
+  updatedAt?: any; // Allow for both Timestamp and string
 }
 
 export interface Order {

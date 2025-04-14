@@ -11,7 +11,8 @@ import {
   where,
   orderBy,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  FieldValue
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -99,7 +100,7 @@ export async function updateProduct(
 ): Promise<void> {
   const productDoc = doc(db, PRODUCTS_COLLECTION, id);
   
-  let updatedData: Partial<Product> & { updatedAt: any } = {
+  let updatedData = {
     ...product,
     updatedAt: serverTimestamp()
   };
