@@ -99,9 +99,9 @@ export async function updateProduct(
 ): Promise<void> {
   const productDoc = doc(db, PRODUCTS_COLLECTION, id);
   
-  let updatedData: Partial<Product> & { updatedAt: Timestamp } = {
+  let updatedData: Partial<Product> & { updatedAt: any } = {
     ...product,
-    updatedAt: serverTimestamp() as unknown as Timestamp
+    updatedAt: serverTimestamp()
   };
   
   // If there's a new image, upload it
